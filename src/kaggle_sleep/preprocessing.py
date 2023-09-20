@@ -3,6 +3,7 @@ import numpy as np
 
 from pyarrow.compute import field
 from pyarrow import Table
+from pyts.image import GramianAngularField
 
 
 def get_time_series(time_series: Table, df_labels: pd.DataFrame,
@@ -36,3 +37,10 @@ def get_time_series(time_series: Table, df_labels: pd.DataFrame,
             df_records.to_parquet(path, engine='pyarrow',
                                   partition_cols=['series_id'])
             df_records = []
+
+
+def time_series_to_image(X: np.ndarray) -> np.ndarray:
+    mapping = GramianAngularField()
+    X_transformed = mapping.fit_transform([X])
+
+    return X_transformed

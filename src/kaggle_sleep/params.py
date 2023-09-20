@@ -22,4 +22,5 @@ PROJECT_LEVEL = get_project_level()
 
 paths: Dict[str, str] = {
     'data': os.path.join(PROJECT_LEVEL, 'data'),
+    'labels': os.path.join(PROJECT_LEVEL, 'data', 'train_events.csv')
 }
