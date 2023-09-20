@@ -1,5 +1,10 @@
+import os
+
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+
+from .params import paths
 
 from pyarrow.compute import field
 from pyarrow import Table
@@ -44,3 +49,33 @@ def time_series_to_image(X: np.ndarray) -> np.ndarray:
     X_transformed = mapping.fit_transform([X])
 
     return X_transformed
+
+
+def preprocess(labels: pd.DataFrame, time_series: pd.DataFrame) -> None:
+    cols_all = ['series_id', 'id', 'event']
+    df_all = labels.merge(time_series[['series_id', 'step', 'id']],
+                          on=['series_id', 'step'])[cols_all]
+
+    grouper = time_series.groupby(['series_id', 'id'], observed=True)
+    for (series_id, id), df_ in grouper:
+        flt = [(df_all['series_id'] == series_id) & (df_all['id'] == id)]
+        label = list(df_all[flt].T.to_dict().values())[0]['event']
+
+        anglez = time_series_to_image(df_['anglez'].to_numpy())
+        enmo = time_series_to_image(df_['enmo'].to_numpy())
+
+        fig, ax = plt.subplots()
+        ax.imshow(anglez[0])
+        ax.axis('off')
+        image_file_name = os.path.join(paths['data'], 'dataset', label,
+                                       'anglez', f'{series_id}_{id}.jpg')
+        fig.savefig(image_file_name, bbox_inches='tight', pad_inches=0)
+        plt.close()
+
+        fig, ax = plt.subplots()
+        ax.imshow(enmo[0])
+        ax.axis('off')
+        image_file_name = os.path.join(paths['data'], 'dataset', label,
+                                       'enmo', f'{series_id}_{id}.jpg')
+        fig.savefig(image_file_name, bbox_inches='tight', pad_inches=0)
+        plt.close()
