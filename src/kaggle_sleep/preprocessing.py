@@ -8,6 +8,7 @@ from .params import paths
 
 from pyarrow.compute import field
 from pyarrow import Table
+from tqdm import tqdm
 from pyts.image import GramianAngularField
 
 
@@ -22,7 +23,6 @@ def get_time_series(time_series: Table, df_labels: pd.DataFrame,
         series_flt = field('series_id') == series_id
         series = time_series.filter(series_flt).to_pandas()
 
-        # pdb.set_trace()
         series['timestamp'] = pd.to_datetime(series['timestamp'],
                                              format=date_format, utc=True)
 
@@ -45,6 +45,7 @@ def get_time_series(time_series: Table, df_labels: pd.DataFrame,
 
 
 def time_series_to_image(X: np.ndarray) -> np.ndarray:
+
     mapping = GramianAngularField()
     X_transformed = mapping.fit_transform([X])
 
@@ -52,13 +53,16 @@ def time_series_to_image(X: np.ndarray) -> np.ndarray:
 
 
 def preprocess(labels: pd.DataFrame, time_series: pd.DataFrame) -> None:
+
     cols_all = ['series_id', 'id', 'event']
     df_all = labels.merge(time_series[['series_id', 'step', 'id']],
                           on=['series_id', 'step'])[cols_all]
 
     grouper = time_series.groupby(['series_id', 'id'], observed=True)
-    for (series_id, id), df_ in grouper:
-        flt = [(df_all['series_id'] == series_id) & (df_all['id'] == id)]
+    records = []
+    for (series_id, id), df_ in tqdm(grouper):
+
+        flt = (df_all['series_id'] == series_id) & (df_all['id'] == id)
         label = list(df_all[flt].T.to_dict().values())[0]['event']
 
         anglez = time_series_to_image(df_['anglez'].to_numpy())
@@ -67,15 +71,21 @@ def preprocess(labels: pd.DataFrame, time_series: pd.DataFrame) -> None:
         fig, ax = plt.subplots()
         ax.imshow(anglez[0])
         ax.axis('off')
-        image_file_name = os.path.join(paths['data'], 'dataset', label,
-                                       'anglez', f'{series_id}_{id}.jpg')
+        image_file_name = os.path.join(paths['data'], 'dataset', 'images',
+                                       f'{series_id}_{id}_anglez.jpg')
         fig.savefig(image_file_name, bbox_inches='tight', pad_inches=0)
         plt.close()
 
         fig, ax = plt.subplots()
         ax.imshow(enmo[0])
         ax.axis('off')
-        image_file_name = os.path.join(paths['data'], 'dataset', label,
-                                       'enmo', f'{series_id}_{id}.jpg')
+        image_file_name = os.path.join(paths['data'], 'dataset', 'images',
+                                       f'{series_id}_{id}_enmo.jpg')
         fig.savefig(image_file_name, bbox_inches='tight', pad_inches=0)
         plt.close()
+
+        records.append((f'{series_id}_{id}', label))
+
+    df = pd.DataFrame(records, columns=['image_id', 'label'])
+    labels_path = os.path.join(paths['data'], 'dataset', 'labels.csv')
+    df.to_csv(labels_path, columns=True)
