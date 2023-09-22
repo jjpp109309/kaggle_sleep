@@ -3,6 +3,7 @@ import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
 
 from .params import paths
 
@@ -54,6 +55,8 @@ def time_series_to_image(X: np.ndarray) -> np.ndarray:
 
 def preprocess(labels: pd.DataFrame, time_series: pd.DataFrame) -> None:
 
+    matplotlib.use('Agg')
+
     cols_all = ['series_id', 'id', 'event']
     df_all = labels.merge(time_series[['series_id', 'step', 'id']],
                           on=['series_id', 'step'])[cols_all]
@@ -74,7 +77,6 @@ def preprocess(labels: pd.DataFrame, time_series: pd.DataFrame) -> None:
         image_file_name = os.path.join(paths['data'], 'dataset', 'images',
                                        f'{series_id}_{id}_anglez.jpg')
         fig.savefig(image_file_name, bbox_inches='tight', pad_inches=0)
-        plt.close()
 
         fig, ax = plt.subplots()
         ax.imshow(enmo[0])
@@ -82,10 +84,10 @@ def preprocess(labels: pd.DataFrame, time_series: pd.DataFrame) -> None:
         image_file_name = os.path.join(paths['data'], 'dataset', 'images',
                                        f'{series_id}_{id}_enmo.jpg')
         fig.savefig(image_file_name, bbox_inches='tight', pad_inches=0)
-        plt.close()
 
         records.append((f'{series_id}_{id}', label))
+        plt.close('all')
 
     df = pd.DataFrame(records, columns=['image_id', 'label'])
     labels_path = os.path.join(paths['data'], 'dataset', 'labels.csv')
-    df.to_csv(labels_path, columns=True)
+    df.to_csv(labels_path, index=False)
